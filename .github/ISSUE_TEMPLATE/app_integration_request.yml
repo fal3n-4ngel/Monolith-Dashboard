@@ -1,0 +1,61 @@
+name: App Integration Request
+description: Register a new application to stream events into Monolith's telemetry pipeline.
+title: "[Integration]: "
+labels: ["integration", "ticket"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This becomes the ticket used to provision your `SourceApp.java` enum, `DomainEventType.java`
+        entries, and destination BigQuery table(s). See `/docs` → **How to Add a New App** for context.
+
+  - type: input
+    id: source-app
+    attributes:
+      label: sourceApp identifier
+      description: The application identifier that will appear in every postback payload.
+      placeholder: my-task-app
+    validations:
+      required: true
+
+  - type: input
+    id: domain-group
+    attributes:
+      label: Target domain group
+      description: The logical grouping this app's events belong to (e.g. finance, productivity, infra).
+      placeholder: productivity
+    validations:
+      required: true
+
+  - type: textarea
+    id: event-types
+    attributes:
+      label: Allowlisted DomainEventType names
+      description: One event type per line, with a one-line description of what triggers it.
+      placeholder: |
+        TASK_CREATED — a new task is saved
+        TASK_COMPLETED — a task is marked done
+    validations:
+      required: true
+
+  - type: textarea
+    id: payload-shape
+    attributes:
+      label: Expected payload fields
+      description: Any fields beyond the standard contract (sourceApp, eventId, eventType, userId, payload.userEmail).
+      placeholder: |
+        payload.taskId: string
+        payload.dueDate: string (ISO 8601)
+    validations:
+      required: false
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where does this app run?
+      options:
+        - GCP Cloud Run / Firebase (Google OIDC auth)
+        - Other backend (shared platform API key)
+        - Not sure yet
+    validations:
+      required: true

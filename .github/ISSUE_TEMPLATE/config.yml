@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://monolith.adithyakrishnan.com/docs
+    about: Read the MCP integration, onboarding, and postback spec before filing a ticket.

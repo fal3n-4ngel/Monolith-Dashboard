@@ -1,0 +1,46 @@
+name: Bug Report
+description: Something in the site, MCP server, or ingestion pipeline is broken.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you expected vs. what actually happened.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where is this happening?
+      options:
+        - Marketing site / landing page
+        - Documentation (/docs)
+        - MCP server (/api/mcp)
+        - Postback ingestion (/api/v1/events/postback)
+        - GitHub telemetry dashboard
+        - Auth / sign-in
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs, error messages, or screenshots
+      render: shell
+    validations:
+      required: false

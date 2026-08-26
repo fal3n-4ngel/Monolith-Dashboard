@@ -1,0 +1,50 @@
+import { redis } from "./redis";
+
+interface CacheEntry<T> {
+  value: T;
+  expiresAt: number;
+}
+const localStore = new Map<string, CacheEntry<unknown>>();
+
+export async function cacheGet<T>(key: string): Promise<T | undefined> {
+  const localEntry = localStore.get(key);
+  if (localEntry && Date.now() <= localEntry.expiresAt) {
+    return localEntry.value as T;
+  }
+
+  if (redis) {
+    try {
+      const data = await redis.get(key);
+      if (data !== null && data !== undefined) {
+        localStore.set(key, { value: data, expiresAt: Date.now() + 30_000 });
+        return data as T;
+      }
+    } catch (err) {
+      console.warn("Redis get error:", err);
+    }
+  }
+  return undefined;
+}
+
+export async function cacheSet<T>(key: string, value: T, ttlMs: number): Promise<void> {
+  localStore.set(key, { value, expiresAt: Date.now() + ttlMs });
+
+  if (redis) {
+    try {
+      await redis.set(key, typeof value === "string" ? value : JSON.stringify(value));
+    } catch (err) {
+      console.warn("Redis set error:", err);
+    }
+  }
+}
+
+export async function cacheInvalidate(key: string): Promise<void> {
+  localStore.delete(key);
+  if (redis) {
+    try {
+      await redis.del(key);
+    } catch (err) {
+      console.warn("Redis del error:", err);
+    }
+  }
+}
