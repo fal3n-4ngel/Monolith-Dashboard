@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 
-const MONOLITH_ENDPOINT = "https://api.adithyakrishnan.com/api/v1/events/postback";
+const MONOLITH_ENDPOINT = "https://monolith-postbacks.adithyakrishnan.com/api/v1/events/postback";
 const MCP_ENDPOINT = "https://monolith.adithyakrishnan.com/api/mcp";
 const GITHUB_ISSUE_URL = "https://github.com/fal3n-4ngel/monolith-dashboard/issues/new/choose";
 const GITHUB_APP_INTEGRATION_ISSUE_URL = "https://github.com/fal3n-4ngel/monolith-dashboard/issues/new?template=app_integration_request.yml";

@@ -36,7 +36,7 @@ Paste the following into your AI agent configuration (Claude Code, Cursor, or An
 
 ## 2. Server-to-Server Telemetry Ingestion API
 
-- **Endpoint:** `POST https://api.adithyakrishnan.com/api/v1/events/postback`
+- **Endpoint:** `POST https://monolith-postbacks.adithyakrishnan.com/api/v1/events/postback`
 - **Authentication:** `Authorization: Bearer <CONTINUUM_API_KEY>`
 
 ### Request Payload DTO

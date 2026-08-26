@@ -5,7 +5,7 @@ import { withToolErrors } from "@/lib/mcp/format";
 const MONOLITH_API_URL =
   process.env.MONOLITH_API_URL ||
   process.env.NEXT_PUBLIC_MONOLITH_API_URL ||
-  "https://api.adithyakrishnan.com";
+  "https://monolith-postbacks.adithyakrishnan.com";
 
 function getApiKey(): string {
   return (
@@ -151,7 +151,7 @@ export function registerAuditTools(server: McpServer) {
         status: isOk ? "UP" : "DEGRADED",
         service: "Monolith Telemetry Ingestion Engine",
         gcpProject: "portfolio-api-505006",
-        postbackEndpoint: "https://api.adithyakrishnan.com/api/v1/events/postback",
+        postbackEndpoint: "https://monolith-postbacks.adithyakrishnan.com/api/v1/events/postback",
         mcpServerEndpoint: "https://monolith.adithyakrishnan.com/api/mcp",
       };
     })

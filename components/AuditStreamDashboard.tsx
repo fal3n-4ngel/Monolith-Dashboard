@@ -91,7 +91,7 @@ export function AuditStreamDashboard() {
   const checkBackendHealth = useCallback(() => {
     setApiHealth({ status: "CHECKING" });
     const start = Date.now();
-    fetch("https://api.adithyakrishnan.com/health")
+    fetch("https://monolith-postbacks.adithyakrishnan.com/health")
       .then((res) => {
         if (res.ok) {
           setApiHealth({ status: "ONLINE", latencyMs: Date.now() - start });
@@ -397,7 +397,7 @@ export function AuditStreamDashboard() {
                 Real-Time Telemetry & Anti-Theft Audit Command Center
               </h2>
               <p className="text-xs text-stone-600 leading-relaxed font-sans">
-                Every event, metric, origin URL, and client IP in this dashboard is derived strictly from real Firestore audit logs ingested by <code className="font-mono bg-stone-100 px-1 py-0.5 rounded">https://api.adithyakrishnan.com</code>.
+                Every event, metric, origin URL, and client IP in this dashboard is derived strictly from real Firestore audit logs ingested by <code className="font-mono bg-stone-100 px-1 py-0.5 rounded">https://monolith-postbacks.adithyakrishnan.com</code>.
               </p>
             </div>
 
@@ -431,7 +431,7 @@ export function AuditStreamDashboard() {
               <div className="text-2xl font-bold text-[#1A1A1A] font-mono">
                 {apiHealth.status === "ONLINE" ? `ONLINE (${apiHealth.latencyMs}ms)` : apiHealth.status === "OFFLINE" ? "OFFLINE" : "CHECKING..."}
               </div>
-              <div className="text-[11px] text-stone-500 font-mono">https://api.adithyakrishnan.com</div>
+              <div className="text-[11px] text-stone-500 font-mono">https://monolith-postbacks.adithyakrishnan.com</div>
             </div>
 
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm space-y-2">
@@ -571,7 +571,7 @@ export function AuditStreamDashboard() {
                 <div className="text-xs font-mono font-bold text-stone-800 flex items-center gap-2">
                   <span>Target API:</span>
                   <span className="text-stone-900 bg-stone-100 px-2 py-0.5 rounded border border-stone-200 font-semibold">
-                    https://api.adithyakrishnan.com/api/v1/audit/postback
+                    https://monolith-postbacks.adithyakrishnan.com/api/v1/audit/postback
                   </span>
                 </div>
                 <div className="text-[11px] text-stone-500 mt-0.5">
