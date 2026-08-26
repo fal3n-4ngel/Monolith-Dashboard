@@ -221,7 +221,7 @@ export function LandingPage() {
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-[var(--accent)] hover:opacity-70 transition-opacity"
           >
-            <span>Open an Issue</span>
+            <span>Open a Integration Ticket</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </a>
         </div>
