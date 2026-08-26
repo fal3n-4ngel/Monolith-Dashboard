@@ -9,12 +9,12 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_URL = "https://monolith.adithyakrishnan.com";
-const SITE_TITLE = "Monolith — Central Audit Telemetry & Data Storage Hub";
+const SITE_TITLE = "Monolith — Central Audit Telemetry & MCP Server";
 const SITE_DESCRIPTION =
-  "Central audit telemetry ingestion engine, BigQuery analytics hub, and real-time audit stream for personal applications.";
+  "Documentation portal and Model Context Protocol server for Monolith — the audit trail and BigQuery data warehouse behind continuum-home, Chayakudikanpooyalo, and every app that streams through monolith-api.";
 
 export const viewport: Viewport = {
-  themeColor: "#F4F3EC",
+  themeColor: "#F5F1E7",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -85,7 +85,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans bg-[#F4F3EC] text-[#191B1D]">
+      <body className="min-h-full flex flex-col font-sans bg-[var(--bg-primary)] text-[var(--text-primary)]">
         <Providers>{children}</Providers>
       </body>
     </html>

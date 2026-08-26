@@ -10,18 +10,17 @@ export default function Icon() {
         style={{
           width: "100%",
           height: "100%",
-          background: "#18181B",
-          borderRadius: 8,
+          background: "#171717",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           position: "relative",
         }}
       >
-        {/* Monolith Obelisk Icon */}
+        {/* Monolith Obelisk Mark */}
         <div style={{ display: "flex", position: "relative", width: 14, height: 24 }}>
-          <div style={{ width: 7, height: 24, background: "#3F3F46" }} />
-          <div style={{ width: 7, height: 24, background: "#27272A" }} />
+          <div style={{ width: 7, height: 24, background: "#4A4A44" }} />
+          <div style={{ width: 7, height: 24, background: "#2E2E2A" }} />
           <div style={{ position: "absolute", left: 6, top: 0, width: 2, height: 24, background: "#FF5C38" }} />
         </div>
       </div>
