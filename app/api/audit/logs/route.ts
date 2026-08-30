@@ -1,15 +1,6 @@
 import { auth } from "@/lib/nextauth";
 import { clientForEmail } from "@/lib/dashboard-clients";
 
-// Server-side proxy for the Monolith audit-log read API.
-//
-// The browser never sees a Monolith key. Every request is gated on a NextAuth
-// session, resolved to a registered dashboard client (DASHBOARD_CLIENTS), and
-// forwarded to monolith-api's GET /api/v1/audit/logs with that client's bearer.
-// A client scoped to one app has `sourceApp` forced to that app here AND is
-// presented a key that monolith-api itself binds to that app — so a bug in one
-// layer cannot expose another client's data.
-
 const MONOLITH_API_URL = (
   process.env.MONOLITH_API_URL ||
   process.env.NEXT_PUBLIC_MONOLITH_API_URL ||
@@ -21,15 +12,9 @@ const FORWARDED_PARAMS = ["userId", "domain", "eventType", "from", "before", "li
 export async function GET(req: Request): Promise<Response> {
   const session = await auth();
   const client = clientForEmail(session?.user?.email);
-
-  if (!client) {
-    return Response.json({ error: "unauthorized" }, { status: 401 });
-  }
+  if (!client) return Response.json({ error: "unauthorized" }, { status: 401 });
   if (!client.key) {
-    return Response.json(
-      { error: "server_misconfigured", message: "no Monolith key configured for this client" },
-      { status: 500 }
-    );
+    return Response.json({ error: "server_misconfigured", message: "no Monolith key configured" }, { status: 500 });
   }
 
   const incoming = new URL(req.url);
@@ -38,10 +23,7 @@ export async function GET(req: Request): Promise<Response> {
     const value = incoming.searchParams.get(param);
     if (value) upstream.searchParams.set(param, value);
   }
-
-  const crossApp = client.scope === "all";
-  if (crossApp) {
-    // Only a cross-app client may narrow by sourceApp; anyone else is pinned.
+  if (client.scope === "all") {
     const requested = incoming.searchParams.get("sourceApp");
     if (requested) upstream.searchParams.set("sourceApp", requested);
   } else {
@@ -55,10 +37,7 @@ export async function GET(req: Request): Promise<Response> {
       cache: "no-store",
     });
   } catch {
-    return Response.json(
-      { error: "upstream_unreachable", message: "Could not reach monolith-api" },
-      { status: 502 }
-    );
+    return Response.json({ error: "upstream_unreachable", message: "Could not reach monolith-api" }, { status: 502 });
   }
 
   const body = await res.text();

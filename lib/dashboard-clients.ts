@@ -1,18 +1,9 @@
-// Maps an authenticated Google identity to what it may see in the audit dashboard.
+// Maps a signed-in Google identity to what it may see in the workspace.
 //
-// DASHBOARD_CLIENTS is a JSON object of email -> { scope, key }:
-//   {
-//     "you@example.com":   { "scope": "all",            "key": "<owner API_KEY>" },
-//     "bob@continuum.com":  { "scope": "continuum-home", "key": "<continuum's scoped monolith key>" }
-//   }
-//
-// `scope` is "all" (every app) or a registered sourceApp id. `key` is the
-// monolith-api bearer presented on that user's behalf — for a scoped user it
-// should itself be a key bound to that app in monolith-api's clients.json, so a
-// bug in the proxy can't leak another client's data (monolith-api returns 403).
-//
-// If DASHBOARD_CLIENTS is unset, the solo-owner fallback applies: ALLOWED_EMAIL
-// with scope "all", keyed by MONOLITH_API_KEY (or the CONTINUUM_*/API_KEY chain).
+// DASHBOARD_CLIENTS is JSON: { "<email>": { "scope": "all" | "<sourceApp>", "key": "<monolith bearer>" } }.
+// A scoped user's `key` should itself be bound to that app in monolith-api's clients.json, so the
+// proxy pinning the scope and monolith-api enforcing it are two independent guards.
+// With DASHBOARD_CLIENTS unset, the solo owner is ALLOWED_EMAIL (scope "all") keyed by MONOLITH_API_KEY.
 
 export interface DashboardClient {
   scope: string;
@@ -63,12 +54,8 @@ function parse(): Record<string, DashboardClient> {
 
 let cache: Record<string, DashboardClient> | null = null;
 
-function clients(): Record<string, DashboardClient> {
-  return (cache ??= parse());
-}
-
-/** @returns the dashboard client for this email, or null if it is not registered. */
 export function clientForEmail(email?: string | null): DashboardClient | null {
   if (!email) return null;
-  return clients()[email.trim().toLowerCase()] ?? null;
+  cache ??= parse();
+  return cache[email.trim().toLowerCase()] ?? null;
 }

@@ -1,6 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { after } from "next/server";
 import { withToolErrors } from "@/lib/mcp/format";
+import { postback } from "@/lib/postback";
 
 const MONOLITH_API_URL =
   process.env.MONOLITH_API_URL ||
@@ -15,6 +17,12 @@ function getApiKey(): string {
     process.env.API_KEY ||
     ""
   );
+}
+
+// The signed-in MCP identity — verifyMcpToken sets clientId to the user's email (or name).
+function mcpActor(extra: { authInfo?: { clientId?: string } } | undefined): string | undefined {
+  const id = extra?.authInfo?.clientId;
+  return id && id.includes("@") ? id : undefined;
 }
 
 export function registerAuditTools(server: McpServer) {
@@ -36,7 +44,9 @@ export function registerAuditTools(server: McpServer) {
         limit: z.number().optional().default(50).describe("Maximum rows to return (server caps at 200)"),
       }),
     },
-    withToolErrors(async ({ userId, sourceApp, from, before, limit }) => {
+    withToolErrors(async ({ userId, sourceApp, from, before, limit }, extra) => {
+      const actor = mcpActor(extra);
+      if (actor) after(() => postback({ eventType: "MCP_QUERY", email: actor, entityId: "query_user_activity" }));
       const apiKey = getApiKey();
       const url = new URL(`${MONOLITH_API_URL.replace(/\/$/, "")}/api/v1/audit/logs`);
       if (userId) url.searchParams.set("userId", userId);
@@ -80,7 +90,9 @@ export function registerAuditTools(server: McpServer) {
         limit: z.number().optional().default(50).describe("Max rows (server caps at 200)"),
       }),
     },
-    withToolErrors(async ({ sourceApp, domain, eventType, userId, from, limit }) => {
+    withToolErrors(async ({ sourceApp, domain, eventType, userId, from, limit }, extra) => {
+      const actor = mcpActor(extra);
+      if (actor) after(() => postback({ eventType: "MCP_QUERY", email: actor, entityId: "query_domain_events" }));
       const apiKey = getApiKey();
       const url = new URL(`${MONOLITH_API_URL.replace(/\/$/, "")}/api/v1/audit/logs`);
       if (sourceApp) url.searchParams.set("sourceApp", sourceApp);

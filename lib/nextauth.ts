@@ -10,17 +10,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    // Only identities registered in DASHBOARD_CLIENTS (or the ALLOWED_EMAIL
-    // solo-owner fallback) may sign in. `profile.email` comes from Google's
-    // signed ID token, so it cannot be spoofed. The proxy re-checks this on
-    // every data request and derives the caller's scope there.
+    // Only identities in DASHBOARD_CLIENTS (or the ALLOWED_EMAIL fallback) may sign in.
+    // The proxies re-check this and derive scope on every request.
     async signIn({ profile }) {
-      const registered = clientForEmail(profile?.email);
-      if (!registered) {
-        console.warn("[auth] denied sign-in for a non-registered identity");
-        return false;
-      }
-      return true;
+      return clientForEmail(profile?.email) !== null;
     },
   },
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,

@@ -10,13 +10,10 @@ import {
   AlertTriangle,
   Filter,
   Download,
-  LogOut,
 } from "lucide-react";
-import { useSession, signOut } from "next-auth/react";
-import { MonolithLogo } from "@/components/MonolithLogo";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
-// Shapes mirror monolith-api's AuditLogPage / AuditLogEntry (GET /api/v1/audit/logs),
-// reached through the server-side proxy at /api/audit/logs which injects the key.
+// Mirrors monolith-api's AuditLogPage / AuditLogEntry.
 export interface AuditLogEntry {
   domain: string | null;
   eventId: string | null;
@@ -51,8 +48,6 @@ interface Filters {
 const EMPTY_FILTERS: Filters = { sourceApp: "", domain: "", eventType: "", userId: "", from: "" };
 
 export function AuditStreamDashboard() {
-  const { data: session } = useSession();
-
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [scope, setScope] = useState<string>("");
   const [cursor, setCursor] = useState<string | null>(null);
@@ -108,7 +103,6 @@ export function AuditStreamDashboard() {
 
   useEffect(() => {
     load(EMPTY_FILTERS, "replace");
-    // first load only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -127,7 +121,6 @@ export function AuditStreamDashboard() {
 
   const hasActiveFilters = useMemo(() => Object.values(applied).some((v) => v.trim() !== ""), [applied]);
 
-  // A client scoped to one app can't pick a source app — the proxy pins it regardless.
   const scopeLocked = scope !== "" && scope.toLowerCase() !== "all";
 
   const downloadCsv = () => {
@@ -139,18 +132,9 @@ export function AuditStreamDashboard() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      {/* Self-contained header — this page is only the audit log. */}
-      <header className="sticky top-0 z-40 border-b border-[var(--border-strong)] bg-[var(--bg-primary)]/95 backdrop-blur-md">
-        <div className="max-w-[1700px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <MonolithLogo size={22} />
-            <span className="font-display font-black text-lg uppercase tracking-wide">Monolith</span>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] border-l border-[var(--border-subtle)] pl-2.5 hidden sm:inline">
-              Audit Log
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
+      <WorkspaceHeader
+        actions={
+          <>
             <button
               onClick={downloadCsv}
               disabled={loading || entries.length === 0}
@@ -169,18 +153,9 @@ export function AuditStreamDashboard() {
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
-            {session?.user && (
-              <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono font-semibold text-[var(--text-secondary)] hover:text-red-700 hover:bg-red-50 border border-[var(--border-subtle)] transition-colors cursor-pointer"
-                title="Log out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         <p className="text-xs text-[var(--text-secondary)]">

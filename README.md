@@ -19,11 +19,13 @@ itself (that's `monolith-api`). Built with Next.js 16 (App Router), it serves th
    onboarding, postback spec, auth, BigQuery architecture).
 2. **Model Context Protocol (MCP) Server** — standard MCP HTTP transport at `/api/mcp` so AI coding agents
    (Claude Code, Cursor, Antigravity) can query audit telemetry and BigQuery schemas directly inside the IDE.
-3. **Audit Dashboard** — [`/audit`](app/audit/page.tsx), behind Google sign-in. Browses
-   domain-event history from `monolith-api`'s `GET /api/v1/audit/logs` through the server-side proxy
-   [`/api/audit/logs`](app/api/audit/logs/route.ts), which holds the Monolith key so it never reaches
-   the browser. Solo-owner by default (`ALLOWED_EMAIL`); set `DASHBOARD_CLIENTS` to let multiple
-   identities each see only their own app.
+3. **Workspace** — behind Google sign-in, two pages sharing one header:
+   [`/audit`](app/audit/page.tsx) browses domain-event history, and [`/reports`](app/reports/page.tsx)
+   runs the admin-authored `reports.json` queries and downloads the CSV. Both go through server-side
+   proxies ([`/api/audit/logs`](app/api/audit/logs/route.ts),
+   [`/api/reports`](app/api/reports/route.ts)) that hold the Monolith key so it never reaches the
+   browser. Solo-owner by default (`ALLOWED_EMAIL`); set `DASHBOARD_CLIENTS` to let multiple
+   identities each see only their own app — the proxy pins `sourceApp` / `callerApp` per session.
 
 Step-by-step app onboarding is covered in-app at `/docs` and in
 [`APP_INTEGRATION_GUIDE.md`](APP_INTEGRATION_GUIDE.md).
@@ -132,7 +134,9 @@ DASHBOARD_CLIENTS='{
   every request. The browser only ever calls the same-origin proxy; no key reaches it.
 
 Onboarding a dashboard client: add its token to monolith-api's `MONOLITH_CLIENT_KEYS` + a
-`clients.json` row, then one line in `DASHBOARD_CLIENTS` here.
+`clients.json` row (with `readScope` and a `reports` allotment), then one line in
+`DASHBOARD_CLIENTS` here. That client then sees only its own audit log and only its allotted
+reports; `/reports` runs are pinned to its app, and CSVs contain only its rows.
 
 ### Available MCP Data Tools
 
@@ -170,6 +174,19 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) for the marketing site, or
 [http://localhost:3000/docs](http://localhost:3000/docs) for the documentation reference.
+
+### Running against a local monolith-api
+
+`/audit` and `/reports` proxy to `MONOLITH_API_URL`, which defaults to the deployed host. To hit a
+local `monolith-api` instead, in `.env.local`:
+
+```env
+MONOLITH_API_URL=http://localhost:8080
+MONOLITH_API_KEY=<the API_KEY from monolith-api/.env>
+```
+
+Then run `monolith-api` (`API_KEY=... mvn spring-boot:run`, port 8080) alongside `npm run dev`.
+Comment `MONOLITH_API_URL` out to go back to the deployed API.
 
 ### Production Build Verification
 ```bash
