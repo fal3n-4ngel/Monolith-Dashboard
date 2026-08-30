@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { clientForEmail } from "@/lib/dashboard-clients";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -9,15 +10,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    // Monolith is a single-owner dev-infra hub — without this gate, any
-    // Google account could sign in and see it.
+    // Only identities registered in DASHBOARD_CLIENTS (or the ALLOWED_EMAIL
+    // solo-owner fallback) may sign in. `profile.email` comes from Google's
+    // signed ID token, so it cannot be spoofed. The proxy re-checks this on
+    // every data request and derives the caller's scope there.
     async signIn({ profile }) {
-      const allowedEmail = process.env.ALLOWED_EMAIL;
-      if (!allowedEmail) {
-        console.error("ALLOWED_EMAIL is not configured — denying sign-in.");
+      const registered = clientForEmail(profile?.email);
+      if (!registered) {
+        console.warn("[auth] denied sign-in for a non-registered identity");
         return false;
       }
-      return profile?.email === allowedEmail;
+      return true;
     },
   },
   secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,

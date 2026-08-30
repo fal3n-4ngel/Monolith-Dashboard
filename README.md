@@ -12,13 +12,18 @@ ingestion engine that receives their events. It exists to do three things:
    detail without leaving the terminal.
 
 This repository (`monolith-dashboard`) is the docs portal and MCP host — it does **not** ingest events
-itself (that's `monolith-api`). Built with Next.js 16 (App Router), it serves two purposes:
+itself (that's `monolith-api`). Built with Next.js 16 (App Router), it serves three purposes:
 
 1. **Marketing & Documentation Site** — a landing page plus a dedicated [`/docs`](app/docs/page.tsx) reference
    with sidebar navigation, scroll-spy, and prev/next paging through every module (MCP integration, app
    onboarding, postback spec, auth, BigQuery architecture).
 2. **Model Context Protocol (MCP) Server** — standard MCP HTTP transport at `/api/mcp` so AI coding agents
    (Claude Code, Cursor, Antigravity) can query audit telemetry and BigQuery schemas directly inside the IDE.
+3. **Audit Dashboard** — [`/audit`](app/audit/page.tsx), behind Google sign-in. Browses
+   domain-event history from `monolith-api`'s `GET /api/v1/audit/logs` through the server-side proxy
+   [`/api/audit/logs`](app/api/audit/logs/route.ts), which holds the Monolith key so it never reaches
+   the browser. Solo-owner by default (`ALLOWED_EMAIL`); set `DASHBOARD_CLIENTS` to let multiple
+   identities each see only their own app.
 
 Step-by-step app onboarding is covered in-app at `/docs` and in
 [`APP_INTEGRATION_GUIDE.md`](APP_INTEGRATION_GUIDE.md).
@@ -79,6 +84,55 @@ MCP_USERS='{"user1@example.com": "mcp_key_12345", "dev_team": "mcp_key_67890"}'
 # 2. Standard Fallback Owner Key
 MCP_API_KEY="WKNcJcLE3c3..."
 ```
+
+### Rate Limiting
+
+`/api/mcp` enforces an in-memory, per-instance admission budget — bucketed by credential when a
+bearer token is present (so a leaked key hits its own ceiling regardless of source IP), falling
+back to source IP otherwise. No external dependency, no cost.
+
+```env
+# Requests per minute per credential/IP bucket. Default 60. 0 disables.
+MCP_RATE_LIMIT_PER_MINUTE=60
+```
+
+### Audit Dashboard (`/audit`)
+
+```env
+# Base URL of monolith-api. Defaults to the production host if unset.
+MONOLITH_API_URL=https://monolith-postbacks.adithyakrishnan.com
+```
+
+**Solo owner** — one Google identity, cross-app read:
+
+```env
+ALLOWED_EMAIL=you@example.com
+# Owner / cross-app key monolith-api accepts (its API_KEY value).
+# Resolution order: MONOLITH_API_KEY | CONTINUUM_BEARER_TOKEN | CONTINUUM_API_KEY | API_KEY.
+MONOLITH_API_KEY="..."
+```
+
+**Multiple clients** — each identity sees only its own app. Set `DASHBOARD_CLIENTS`, a JSON map
+of `email -> { scope, key }` (this supersedes the solo-owner vars, which stay as a fallback):
+
+```env
+DASHBOARD_CLIENTS='{
+  "you@example.com":   { "scope": "all",            "key": "<owner API_KEY>" },
+  "bob@continuum.com":  { "scope": "continuum-home", "key": "<continuum'\''s scoped monolith key>" }
+}'
+```
+
+- `scope` is `all` (every app) or a registered `sourceApp` id.
+- `key` is the monolith-api bearer presented on that user's behalf. For a scoped user, use a key
+  that monolith-api's `clients.json` also binds to that app — then the proxy pins `sourceApp`
+  **and** monolith-api rejects (`403`) any request for another app, so neither layer alone can
+  leak cross-client.
+- Sign-in ([`lib/nextauth.ts`](lib/nextauth.ts)) is denied for any email not in the map;
+  [`/api/audit/logs`](app/api/audit/logs/route.ts) re-checks the session and forces the scope on
+  every request. The browser only ever calls the same-origin proxy; no key reaches it.
+
+Onboarding a dashboard client: add its token to monolith-api's `MONOLITH_CLIENT_KEYS` + a
+`clients.json` row, then one line in `DASHBOARD_CLIENTS` here.
 
 ### Available MCP Data Tools
 

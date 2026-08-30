@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,6 +11,7 @@ import {
   Home as HomeIcon,
   ChevronDown,
   LogOut,
+  LogIn,
   GitFork,
 } from "lucide-react";
 import { MonolithLogo } from "@/components/MonolithLogo";
@@ -19,7 +20,7 @@ const NAV_LINKS = [{ href: "/github", label: "GitHub", icon: GitFork }];
 
 export function NavigationHeader() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const isHome = pathname === "/";
   const headerLabel = isHome ? "Monolith Telemetry Hub" : "Monolith Workspace";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -38,6 +39,10 @@ export function NavigationHeader() {
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/" });
+  };
+
+  const handleSignIn = () => {
+    signIn("google", { callbackUrl: pathname && pathname !== "/" ? pathname : "/audit" });
   };
 
   return (
@@ -92,9 +97,9 @@ export function NavigationHeader() {
             {menuOpen && (
               <div className="absolute left-0 top-full mt-2 w-64 border border-[var(--border-strong)] bg-[var(--bg-card)] p-2 z-50 animate-fadeIn">
                 <Link
-                  href="/"
+                  href="/audit"
                   className={`flex items-center gap-2.5 px-3 py-2 text-xs font-semibold transition-colors ${
-                    isHome ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] hover:text-[var(--text-primary)]"
+                    pathname === "/audit" ? "bg-[var(--text-primary)] text-[var(--bg-primary)]" : "text-[var(--text-secondary)] hover:bg-[var(--bg-primary)] hover:text-[var(--text-primary)]"
                   }`}
                 >
                   <HomeIcon className="w-3.5 h-3.5" />
@@ -125,9 +130,9 @@ export function NavigationHeader() {
           </div>
         </div>
 
-        {/* Right Section: Avatar & Sign Out */}
+        {/* Right Section: Avatar & Sign Out, or Sign In */}
         <div className="flex items-center space-x-3 text-xs font-semibold text-[var(--text-secondary)]">
-          {session?.user && (
+          {session?.user ? (
             <div className="flex items-center space-x-2.5">
               {session.user.image ? (
                 <img
@@ -142,13 +147,24 @@ export function NavigationHeader() {
               )}
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold text-[var(--text-secondary)] hover:text-red-700 hover:bg-red-50 border border-[var(--border-subtle)] transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold text-[var(--text-secondary)] hover:text-red-700 hover:bg-red-50 border border-[var(--border-subtle)] transition-colors cursor-pointer"
                 title="Log out and redirect to landing page"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Log out</span>
               </button>
             </div>
+          ) : (
+            status !== "loading" && (
+              <button
+                onClick={handleSignIn}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-semibold text-[var(--text-primary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-primary)] border border-[var(--border-strong)] transition-colors cursor-pointer"
+                title="Sign in with the allow-listed Google account"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign in</span>
+              </button>
+            )
           )}
         </div>
       </div>

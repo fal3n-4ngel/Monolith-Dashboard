@@ -1,16 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Minus,
-  Plus,
-  Database,
-  Server,
-  Cpu,
-  Globe,
-} from "lucide-react";
+import Link from "next/link";
+import { useSession, signIn } from "next-auth/react";
+import { ArrowRight, ArrowUpRight, Minus, Plus } from "lucide-react";
 import { MonolithLogo } from "@/components/MonolithLogo";
 
 const GITHUB_ISSUE_URL = "https://github.com/fal3n-4ngel/monolith-dashboard/issues/new/choose";
@@ -192,6 +185,30 @@ function TechButton({
   );
 }
 
+function DashboardCta() {
+  const { status } = useSession();
+  const authed = status === "authenticated";
+  const cls =
+    "inline-flex items-stretch text-xs font-mono font-semibold uppercase tracking-wider transition-colors bg-[var(--text-primary)] text-[var(--bg-primary)] hover:bg-[var(--accent)] group";
+  const body = (
+    <>
+      <span className="px-4 py-2.5 flex items-center">{authed ? "Open dashboard" : "Sign in"}</span>
+      <span className="flex items-center px-3 border-l border-[var(--bg-primary)]/25 border-dashed">
+        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+      </span>
+    </>
+  );
+  return authed ? (
+    <Link href="/audit" className={cls}>
+      {body}
+    </Link>
+  ) : (
+    <button type="button" onClick={() => signIn("google", { callbackUrl: "/audit" })} className={cls}>
+      {body}
+    </button>
+  );
+}
+
 export function LandingPage() {
   const [openCase, setOpenCase] = useState(0);
 
@@ -215,15 +232,18 @@ export function LandingPage() {
             ))}
           </nav>
 
-          <a
-            href={GITHUB_ISSUE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-[var(--accent)] hover:opacity-70 transition-opacity"
-          >
-            <span>Open a Integration Ticket</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </a>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <a
+              href={GITHUB_ISSUE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-[var(--accent)] hover:opacity-70 transition-opacity"
+            >
+              <span>Integration Ticket</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+            <DashboardCta />
+          </div>
         </div>
       </header>
 
@@ -248,10 +268,13 @@ export function LandingPage() {
               whatever&apos;s next — into one permanent BigQuery warehouse, so there&apos;s a single place to
               query for reports instead of one database per app.
             </p>
-            <a href="#apps" className="inline-flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-[var(--accent)] hover:opacity-70 transition-opacity">
-              <span>Discover More</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
-            </a>
+            <div className="flex flex-wrap items-center gap-4">
+              <DashboardCta />
+              <a href="#apps" className="inline-flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-widest text-[var(--accent)] hover:opacity-70 transition-opacity">
+                <span>Discover More</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
         </div>
 

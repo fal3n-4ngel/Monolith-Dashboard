@@ -24,18 +24,25 @@ export function registerAuditTools(server: McpServer) {
     {
       title: "Query User Activity & Audit Telemetry",
       description:
-        "Query cross-domain user activity records and domain events from the Monolith BigQuery data warehouse.",
+        "Query a user's domain-event history from Monolith via GET /api/v1/audit/logs. " +
+        "Returns { scope, count, results[], nextBefore }, newest first. The calling key is " +
+        "confined to its own app; only a cross-app key may pass sourceApp. Email lookups are " +
+        "not supported (no identity view) — filter by userId.",
       inputSchema: z.object({
-        userId: z.string().optional().describe("Filter by specific local user ID"),
-        email: z.string().optional().describe("Filter by user email address"),
-        limit: z.number().optional().default(50).describe("Maximum number of audit events to return"),
+        userId: z.string().optional().describe("Filter by the acting user's local ID as known to the source app"),
+        sourceApp: z.string().optional().describe("Cross-app keys only: restrict to one app, e.g. continuum-home"),
+        from: z.string().optional().describe("Lower bound on occurred_at — ISO-8601 or epoch millis. Omit to scan the last 30 days"),
+        before: z.string().optional().describe("Upper bound on occurred_at (exclusive). Pass a prior nextBefore to paginate"),
+        limit: z.number().optional().default(50).describe("Maximum rows to return (server caps at 200)"),
       }),
     },
-    withToolErrors(async ({ userId, email, limit }) => {
+    withToolErrors(async ({ userId, sourceApp, from, before, limit }) => {
       const apiKey = getApiKey();
       const url = new URL(`${MONOLITH_API_URL.replace(/\/$/, "")}/api/v1/audit/logs`);
       if (userId) url.searchParams.set("userId", userId);
-      if (email) url.searchParams.set("email", email);
+      if (sourceApp) url.searchParams.set("sourceApp", sourceApp);
+      if (from) url.searchParams.set("from", from);
+      if (before) url.searchParams.set("before", before);
       url.searchParams.set("limit", (limit || 50).toString());
 
       const res = await fetch(url.toString(), {
@@ -61,20 +68,26 @@ export function registerAuditTools(server: McpServer) {
     {
       title: "Query Domain Audit Events",
       description:
-        "Query telemetry events by source application, domain, or specific event type (e.g. EXPENSE_CREATED).",
+        "Query domain events from Monolith via GET /api/v1/audit/logs, filtered by app, domain, " +
+        "or event type. Returns { scope, count, results[], nextBefore }. A scoped key sees only " +
+        "its own app; sourceApp is honoured only for a cross-app key.",
       inputSchema: z.object({
-        sourceApp: z.string().optional().describe("Source application name (e.g. continuum-home)"),
-        domain: z.string().optional().describe("Domain name (e.g. expenses, watchlist, library)"),
-        eventType: z.string().optional().describe("Specific domain event type (e.g. EXPENSE_CREATED)"),
-        limit: z.number().optional().default(50).describe("Max event limit"),
+        sourceApp: z.string().optional().describe("Cross-app keys only: source application name (e.g. continuum-home)"),
+        domain: z.string().optional().describe("Domain name (e.g. expenses, watchlist, investments, subscriptions)"),
+        eventType: z.string().optional().describe("Allowlisted domain event type (e.g. EXPENSE_CREATED)"),
+        userId: z.string().optional().describe("Filter by the acting user's local ID"),
+        from: z.string().optional().describe("Lower bound on occurred_at — ISO-8601 or epoch millis"),
+        limit: z.number().optional().default(50).describe("Max rows (server caps at 200)"),
       }),
     },
-    withToolErrors(async ({ sourceApp, domain, eventType, limit }) => {
+    withToolErrors(async ({ sourceApp, domain, eventType, userId, from, limit }) => {
       const apiKey = getApiKey();
       const url = new URL(`${MONOLITH_API_URL.replace(/\/$/, "")}/api/v1/audit/logs`);
       if (sourceApp) url.searchParams.set("sourceApp", sourceApp);
       if (domain) url.searchParams.set("domain", domain);
       if (eventType) url.searchParams.set("eventType", eventType);
+      if (userId) url.searchParams.set("userId", userId);
+      if (from) url.searchParams.set("from", from);
       url.searchParams.set("limit", (limit || 50).toString());
 
       const res = await fetch(url.toString(), {
