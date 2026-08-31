@@ -74,12 +74,12 @@ Every signed-in caller ends up with a NextAuth session, and every data request g
 
 ```mermaid
 flowchart LR
-  U[Owner / scoped user] -->|Google session| P
-  AI[AI agent] -->|Bearer| MCP[/api/mcp]
-  P[Server proxy<br/>holds the key · pins scope] -->|Bearer| API[Monolith API]
+  U["Owner / scoped user"] -->|Google session| P
+  AI["AI agent"] -->|Bearer| MCP["/api/mcp"]
+  P["Server proxy<br/>holds the key, pins scope"] -->|Bearer| API["Monolith API"]
   MCP -->|Bearer| API
-  P -. REPORT_RUN / MCP_QUERY .-> API
-  API --> BQ[(BigQuery)]
+  P -. "REPORT_RUN / MCP_QUERY" .-> API
+  API --> BQ[("BigQuery")]
 ```
 
 Reference docs — MCP setup, onboarding, the postback contract, the report catalog — live at **[monolith.adithyakrishnan.com](https://monolith.adithyakrishnan.com)**.
