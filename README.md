@@ -1,216 +1,155 @@
-# Monolith — Central Audit Telemetry & MCP Server
+<h1 align="center"> Monolith — Every App's Data, One Place to Ask </h1>
+<h1 align="center">
 
-Monolith is the audit and reporting layer for a small ecosystem of personal apps — currently
-[`continuum-home`](https://github.com/fal3n-4ngel) and `Chayakudikanpooyalo`, with `monolith-api` as the
-ingestion engine that receives their events. It exists to do three things:
+  <br>
+  <div>
+    <a href="https://github.com/fal3n-4ngel/monolith-dashboard/issues">
+        <img src="https://img.shields.io/github/issues/fal3n-4ngel/monolith-dashboard?color=fab387&labelColor=303446&style=for-the-badge">
+    </a>
+    <a href="https://github.com/fal3n-4ngel/monolith-dashboard/stargazers">
+        <img src="https://img.shields.io/github/stars/fal3n-4ngel/monolith-dashboard?color=ca9ee6&labelColor=303446&style=for-the-badge">
+    </a>
+    <a href="https://github.com/fal3n-4ngel/monolith-dashboard">
+        <img src="https://img.shields.io/github/repo-size/fal3n-4ngel/monolith-dashboard?color=ea999c&labelColor=303446&style=for-the-badge">
+    </a>
+    <a href="https://github.com/fal3n-4ngel/monolith-dashboard/blob/main/LICENSE">
+        <img src="https://img.shields.io/static/v1.svg?style=for-the-badge&label=License&message=MIT&logoColor=ca9ee6&colorA=313244&colorB=cba6f7"/>
+    </a>
+    <br>
+    </div>
 
-1. **Audit every event, per app** — every domain event from every registered app is recorded permanently,
-   the moment it happens.
-2. **Store it all in one place** — every app writes into the same GCP BigQuery warehouse instead of its
-   own siloed database.
-3. **Make it queryable** — run SQL directly, or ask an MCP-connected AI agent, for reports and cross-app
-   detail without leaving the terminal.
+   </h1>
 
-This repository (`monolith-dashboard`) is the docs portal and MCP host — it does **not** ingest events
-itself (that's `monolith-api`). Built with Next.js 16 (App Router), it serves three purposes:
+## What is Monolith?
 
-1. **Marketing & Documentation Site** — a landing page plus a dedicated [`/docs`](app/docs/page.tsx) reference
-   with sidebar navigation, scroll-spy, and prev/next paging through every module (MCP integration, app
-   onboarding, postback spec, auth, BigQuery architecture).
-2. **Model Context Protocol (MCP) Server** — standard MCP HTTP transport at `/api/mcp` so AI coding agents
-   (Claude Code, Cursor, Antigravity) can query audit telemetry and BigQuery schemas directly inside the IDE.
-3. **Workspace** — behind Google sign-in, two pages sharing one header:
-   [`/audit`](app/audit/page.tsx) browses domain-event history, and [`/reports`](app/reports/page.tsx)
-   runs the admin-authored `reports.json` queries and downloads the CSV. Both go through server-side
-   proxies ([`/api/audit/logs`](app/api/audit/logs/route.ts),
-   [`/api/reports`](app/api/reports/route.ts)) that hold the Monolith key so it never reaches the
-   browser. Solo-owner by default (`ALLOWED_EMAIL`); set `DASHBOARD_CLIENTS` to let multiple
-   identities each see only their own app — the proxy pins `sourceApp` / `callerApp` per session.
+Monolith is the front door to [Monolith API](https://github.com/fal3n-4ngel/Monolith-API)'s BigQuery warehouse — the audit trail behind [Continuum Home](https://github.com/fal3n-4ngel/Continuum-Home) and every app that streams events through it. It does three things:
 
-Step-by-step app onboarding is covered in-app at `/docs` and in
-[`APP_INTEGRATION_GUIDE.md`](APP_INTEGRATION_GUIDE.md).
+- **Documentation portal** at [`/docs`](app/docs/page.tsx) — MCP integration, app onboarding, the postback contract, auth, and the BigQuery schema, with sidebar navigation and prev/next paging.
+- **Model Context Protocol server** at `/api/mcp` — so an AI coding agent can query audit telemetry and the schema from inside the editor.
+- **Reporting workspace** at [`/audit`](app/audit/page.tsx) and [`/reports`](app/reports/page.tsx) — browse domain-event history and run the admin-authored reports, download as CSV. Gated behind Google sign-in; a solo owner by default, or many identities each seeing only their own app.
 
----
+Live at **[monolith.adithyakrishnan.com](https://monolith.adithyakrishnan.com)**. It does **not** ingest events itself — that is Monolith API.
 
-## 🎨 UI/UX & Design System
+## Technical Details
 
-The UI follows a technical/blueprint aesthetic — hairline borders, sharp corners, ruler ticks, and an
-orange accent — defined as CSS custom properties in [`app/globals.css`](app/globals.css):
-
-| Token | Value | Usage |
-| :--- | :--- | :--- |
-| `--bg-primary` | `#F5F1E7` | Page background (warm paper) |
-| `--bg-card` | `#FAF7EF` | Panels, cards, code blocks |
-| `--text-primary` | `#171717` | Headings, body copy |
-| `--text-secondary` | `#6B6960` | Muted / meta text |
-| `--border-subtle` | `#DAD6C8` | Hairline dividers |
-| `--border-strong` | `#171717` | Structural borders, headers |
-| `--accent` | `#FF5C38` | Links, CTAs, live-status markers |
-
-- **Display Typography:** `Big Shoulders Display` (condensed, black weight) for uppercase headlines.
-- **Body Typography:** `Geist` sans-serif for copy and UI controls.
-- **Monospace Typography:** `Geist Mono` for code snippets, JSON payloads, SQL queries, and nav labels.
-
----
-
-## ⚡ Model Context Protocol (MCP) Integration
-
-Monolith exposes HTTP MCP transport over SSE at `/api/mcp`.
-
-### Client Configuration (`mcp_config.json`)
-
-Add the following to your AI agent configuration:
-
-```json
-{
-  "mcpServers": {
-    "monolith-telemetry": {
-      "url": "https://monolith.adithyakrishnan.com/api/mcp",
-      "headers": {
-        "Authorization": "Bearer YOUR_REGISTERED_MCP_KEY"
-      }
-    }
-  }
-}
+```
+Framework:  Next.js 16 (App Router, Turbopack) + React 19 + TypeScript
+Styling:    Tailwind CSS v4
+Auth:       NextAuth v5 — Google Sign-In, restricted to registered identities
+MCP:        mcp-handler over standard HTTP transport, Bearer-authenticated
+Hosting:    Vercel — monolith.adithyakrishnan.com
 ```
 
-### 🔐 Registering Allowed MCP Users & Multi-Tenant Keys
+## Features
 
-Access to `/api/mcp` is strictly restricted to authenticated MCP users. Register user keys via environment
-variables on Vercel / Cloud Run:
+- **Server-side proxies.** The browser never holds a Monolith key — [`/api/audit/logs`](app/api/audit/logs/route.ts) and [`/api/reports`](app/api/reports/route.ts) hold it and forward to Monolith API on the signed-in user's behalf.
+- **Per-identity scoping.** `DASHBOARD_CLIENTS` maps an email to `{ scope, key }`. A scoped user sees only their app; the proxy pins `sourceApp` / `callerApp` on every request, and the key it presents is itself bound to that app upstream.
+- **Reports UI.** Typed inputs, sensible defaults, a client picker restricted to the apps a report applies to, a `General` / per-app tab split, and a one-click CSV download.
+- **Its own telemetry.** The dashboard postbacks `REPORT_RUN` and `MCP_QUERY` events back to Monolith API as `sourceApp: monolith-dashboard`, so its usage shows up in the same reports.
+- **Multi-user MCP.** `/api/mcp` registers per-user bearer keys and an owner fallback, with an in-memory per-instance rate limit.
 
-```env
-# 1. JSON Map of User Identifier -> Bearer Token
-MCP_USERS='{"user1@example.com": "mcp_key_12345", "dev_team": "mcp_key_67890"}'
+## Project Structure
 
-# 2. Standard Fallback Owner Key
-MCP_API_KEY="WKNcJcLE3c3..."
+```
+app/
+├── audit/            # Audit-log workspace (ProtectedRoute)
+├── reports/          # Reports workspace (ProtectedRoute)
+├── docs/             # Documentation portal
+├── api/
+│   ├── audit/logs/   # Server proxy → Monolith API GET /api/v1/audit/logs
+│   ├── reports/      # Server proxies → GET /api/v1/reports + /{id}/run
+│   ├── mcp/          # Model Context Protocol server
+│   └── auth/         # NextAuth handlers
+components/           # AuditStreamDashboard, ReportsWorkspace, WorkspaceHeader, landing
+lib/
+├── nextauth.ts       # Google auth, sign-in gated to registered identities
+├── dashboard-clients.ts  # email → { scope, key }
+├── postback.ts       # fire-and-forget usage telemetry to Monolith API
+└── mcp/              # MCP auth, rate limit, and audit tools
 ```
 
-### Rate Limiting
+## Architecture
 
-`/api/mcp` enforces an in-memory, per-instance admission budget — bucketed by credential when a
-bearer token is present (so a leaked key hits its own ceiling regardless of source IP), falling
-back to source IP otherwise. No external dependency, no cost.
+Every signed-in caller ends up with a NextAuth session, and every data request goes through a same-origin proxy route — the Monolith API key stays on the server. The proxy resolves the session to a registered client, forwards the request with that client's bearer, and forces the app scope so a scoped user can only ever pull their own rows. AI agents take the other door: `/api/mcp`, bearer-authenticated, calling the same read endpoints. Report runs and MCP queries are postbacked to Monolith API so the dashboard's own usage lands in the warehouse alongside everything else.
 
-```env
-# Requests per minute per credential/IP bucket. Default 60. 0 disables.
-MCP_RATE_LIMIT_PER_MINUTE=60
+```mermaid
+flowchart LR
+  U[Owner / scoped user] -->|Google session| P
+  AI[AI agent] -->|Bearer| MCP[/api/mcp]
+  P[Server proxy<br/>holds the key · pins scope] -->|Bearer| API[Monolith API]
+  MCP -->|Bearer| API
+  P -. REPORT_RUN / MCP_QUERY .-> API
+  API --> BQ[(BigQuery)]
 ```
 
-### Audit Dashboard (`/audit`)
+Reference docs — MCP setup, onboarding, the postback contract, the report catalog — live at **[monolith.adithyakrishnan.com](https://monolith.adithyakrishnan.com)**.
 
-```env
-# Base URL of monolith-api. Defaults to the production host if unset.
-MONOLITH_API_URL=https://monolith-postbacks.adithyakrishnan.com
-```
+## Run Locally
 
-**Solo owner** — one Google identity, cross-app read:
+### Clone & install
 
-```env
-ALLOWED_EMAIL=you@example.com
-# Owner / cross-app key monolith-api accepts (its API_KEY value).
-# Resolution order: MONOLITH_API_KEY | CONTINUUM_BEARER_TOKEN | CONTINUUM_API_KEY | API_KEY.
-MONOLITH_API_KEY="..."
-```
-
-**Multiple clients** — each identity sees only its own app. Set `DASHBOARD_CLIENTS`, a JSON map
-of `email -> { scope, key }` (this supersedes the solo-owner vars, which stay as a fallback):
-
-```env
-DASHBOARD_CLIENTS='{
-  "you@example.com":   { "scope": "all",            "key": "<owner API_KEY>" },
-  "bob@continuum.com":  { "scope": "continuum-home", "key": "<continuum'\''s scoped monolith key>" }
-}'
-```
-
-- `scope` is `all` (every app) or a registered `sourceApp` id.
-- `key` is the monolith-api bearer presented on that user's behalf. For a scoped user, use a key
-  that monolith-api's `clients.json` also binds to that app — then the proxy pins `sourceApp`
-  **and** monolith-api rejects (`403`) any request for another app, so neither layer alone can
-  leak cross-client.
-- Sign-in ([`lib/nextauth.ts`](lib/nextauth.ts)) is denied for any email not in the map;
-  [`/api/audit/logs`](app/api/audit/logs/route.ts) re-checks the session and forces the scope on
-  every request. The browser only ever calls the same-origin proxy; no key reaches it.
-
-Onboarding a dashboard client: add its token to monolith-api's `MONOLITH_CLIENT_KEYS` + a
-`clients.json` row (with `readScope` and a `reports` allotment), then one line in
-`DASHBOARD_CLIENTS` here. That client then sees only its own audit log and only its allotted
-reports; `/reports` runs are pinned to its app, and CSVs contain only its rows.
-
-### Available MCP Data Tools
-
-| MCP Tool Name | Description | Arguments |
-| :--- | :--- | :--- |
-| **`query_user_activity`** | Query user event history & cross-domain activity | `userId`, `email`, `limit` |
-| **`query_domain_events`** | Filter telemetry events by source app, domain, or eventType | `sourceApp`, `domain`, `eventType`, `limit` |
-| **`get_bigquery_schema`** | Returns table schema, partitioning policy, & view specs | None |
-| **`get_system_health`** | Checks Cloud Run backend ingestion status & dataset bindings | None |
-
----
-
-## 📊 BigQuery Data Warehouse Architecture
-
-All domain event tables in dataset `portfolio-api-505006:events` share a standardized schema:
-
-- **Partitioning:** `DAY on occurred_at` — **Permanent / Infinite Retention (no expiration)**
-- **Clustering:** `(local_user_id, event_type)`
-
-### Tables & Views
-- `continuum_home_expenses` (Table)
-- `continuum_home_investments` (Table)
-- `continuum_home_subscriptions` (Table)
-- `continuum_home_watchlist` (Table)
-- `events.all_events` (View — UNION of all domain event tables)
-- `events.user_activity` (View — joins `all_events` with user identity profiles)
-
----
-
-## 🛠️ Local Development & Build
-
-### Development Server
 ```bash
-npm run dev
+git clone https://github.com/fal3n-4ngel/monolith-dashboard.git
+cd monolith-dashboard
+npm install
 ```
-Open [http://localhost:3000](http://localhost:3000) for the marketing site, or
-[http://localhost:3000/docs](http://localhost:3000/docs) for the documentation reference.
 
-### Running against a local monolith-api
+### Configure
 
-`/audit` and `/reports` proxy to `MONOLITH_API_URL`, which defaults to the deployed host. To hit a
-local `monolith-api` instead, in `.env.local`:
+Create `.env.local` (git-ignored) with the Google OAuth credentials (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SECRET`), the allow-listed identity (`ALLOWED_EMAIL`), and a Monolith API key (`MONOLITH_API_KEY`). To point the proxies at a local Monolith API instead of production:
 
 ```env
 MONOLITH_API_URL=http://localhost:8080
-MONOLITH_API_KEY=<the API_KEY from monolith-api/.env>
 ```
 
-Then run `monolith-api` (`API_KEY=... mvn spring-boot:run`, port 8080) alongside `npm run dev`.
-Comment `MONOLITH_API_URL` out to go back to the deployed API.
+The full variable list — including `DASHBOARD_CLIENTS` for multi-tenant setups — is on the docs site.
 
-### Production Build Verification
+### Develop
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). `/audit` and `/reports` need a running Monolith API; the landing page and `/docs` do not.
+
+### Production build
+
 ```bash
 npm run build
+npm run start
 ```
 
+## Security Model
+
+- **The key never reaches the browser.** All data flows through same-origin proxy routes that attach the Bearer server-side.
+- **Sign-in is gated.** Only emails in `DASHBOARD_CLIENTS` (or the `ALLOWED_EMAIL` solo-owner fallback) get a session; the proxy re-checks on every request.
+- **Scope is enforced twice.** The proxy pins `sourceApp` per session, *and* the key it presents is bound to that app in Monolith API — a bug in one layer can't leak another client's data.
+- **MCP is bearer-only** and rate limited per credential.
+
+# Contributors
+
+<table>
+<tr>
+    <td align="center">
+        <a href="https://github.com/fal3n-4ngel">
+            <img src="https://avatars.githubusercontent.com/u/79042374?v=4" width="100;" alt="fal3n-4ngel"/>
+            <br />
+            <sub><b>Adithya Krishnan</b></sub>
+        </a>
+    </td>
+   </tr>
+</table>
+
+## License
+
+Open-source under the [MIT License](LICENSE). Contribution conventions are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ---
 
-## 🎫 Onboarding a New Application
+## 📝 Authors' Note
 
-Because table routing is resolved server-side via `DomainEventType`, onboarding a new application starts
-with a GitHub Issue — it auto-populates as a ticket on the project board, no separate board access needed:
+> Monolith API was headless for a while — postbacks in, BigQuery rows out, and a SQL console when I actually wanted to look at something. This is the part where looking at it stopped being a chore.
+>
+> The docs and the MCP server came first, then the audit view, then reports once I got tired of writing the same `GROUP BY` by hand. The multi-tenant bits exist so I can give someone a link to their own numbers without giving them the warehouse.
 
-1. [Open a new issue](https://github.com/fal3n-4ngel/monolith-dashboard/issues/new/choose) using the
-   **App Integration Request** template.
-2. State your `sourceApp` identifier, target domain group, and allowlisted `DomainEventType` names.
-3. Upon approval, the server-side routing enum and destination BigQuery table are provisioned, with
-   permanent retention and daily partitioning.
-
-Full field-level details live at [`/docs`](app/docs/page.tsx) under **How to Add a New App**.
-
----
-
-## 🤝 Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for local setup, coding conventions, and how issues turn into
-shipped changes.
+<a href="https://www.buymeacoffee.com/fal3n-4ngel" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
