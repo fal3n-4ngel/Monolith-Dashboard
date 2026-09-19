@@ -3,13 +3,14 @@ import { z } from "zod";
 import { after } from "next/server";
 import { withToolErrors } from "@/lib/mcp/format";
 import { postback } from "@/lib/postback";
+import { clientForEmail } from "@/lib/dashboard-clients";
 
 const MONOLITH_API_URL =
   process.env.MONOLITH_API_URL ||
   process.env.NEXT_PUBLIC_MONOLITH_API_URL ||
   "https://monolith-postbacks.adithyakrishnan.com";
 
-function getApiKey(): string {
+function ownerKey(): string {
   return (
     process.env.MONOLITH_API_KEY ||
     process.env.CONTINUUM_BEARER_TOKEN ||
@@ -19,10 +20,37 @@ function getApiKey(): string {
   );
 }
 
-// The signed-in MCP identity — verifyMcpToken sets clientId to the user's email (or name).
-function mcpActor(extra: { authInfo?: { clientId?: string } } | undefined): string | undefined {
+type McpAuthExtra = {
+  authInfo?: { clientId?: string; extra?: { role?: string } };
+};
+
+interface McpAccess {
+  bearer: string;
+  forcedApp?: string;
+  actorEmail?: string;
+}
+
+function resolveAccess(extra: McpAuthExtra | undefined): McpAccess {
   const id = extra?.authInfo?.clientId;
-  return id && id.includes("@") ? id : undefined;
+  const actorEmail = id && id.includes("@") ? id : undefined;
+
+  if (extra?.authInfo?.extra?.role === "admin") {
+    const bearer = ownerKey();
+    if (!bearer) throw new Error("Admin MCP identity, but no MONOLITH_API_KEY is configured to call Monolith with.");
+    return { bearer, actorEmail };
+  }
+
+  const client = clientForEmail(actorEmail);
+  if (!client) {
+    throw new Error(
+      "This MCP identity is not provisioned for data access. Add it to DASHBOARD_CLIENTS as `\"<email>\": { \"scope\", \"key\" }`."
+    );
+  }
+  return {
+    bearer: client.key,
+    forcedApp: client.scope === "all" ? undefined : client.scope,
+    actorEmail,
+  };
 }
 
 export function registerAuditTools(server: McpServer) {
@@ -33,33 +61,31 @@ export function registerAuditTools(server: McpServer) {
       title: "Query User Activity & Audit Telemetry",
       description:
         "Query a user's domain-event history from Monolith via GET /api/v1/audit/logs. " +
-        "Returns { scope, count, results[], nextBefore }, newest first. The calling key is " +
-        "confined to its own app; only a cross-app key may pass sourceApp. Email lookups are " +
-        "not supported (no identity view) — filter by userId.",
+        "Returns { scope, count, results[], nextBefore }, newest first. Your identity's key is " +
+        "confined to its own app; sourceApp is honoured only for an admin identity. Email " +
+        "lookups are not supported (no identity view) — filter by userId.",
       inputSchema: z.object({
         userId: z.string().optional().describe("Filter by the acting user's local ID as known to the source app"),
-        sourceApp: z.string().optional().describe("Cross-app keys only: restrict to one app, e.g. continuum-home"),
+        sourceApp: z.string().optional().describe("Admin identity only: restrict to one app, e.g. continuum-home"),
         from: z.string().optional().describe("Lower bound on occurred_at — ISO-8601 or epoch millis. Omit to scan the last 30 days"),
         before: z.string().optional().describe("Upper bound on occurred_at (exclusive). Pass a prior nextBefore to paginate"),
         limit: z.number().optional().default(50).describe("Maximum rows to return (server caps at 200)"),
       }),
     },
     withToolErrors(async ({ userId, sourceApp, from, before, limit }, extra) => {
-      const actor = mcpActor(extra);
-      if (actor) after(() => postback({ eventType: "MCP_QUERY", email: actor, entityId: "query_user_activity" }));
-      const apiKey = getApiKey();
+      const { bearer, forcedApp, actorEmail } = resolveAccess(extra);
+      if (actorEmail) after(() => postback({ eventType: "MCP_QUERY", email: actorEmail, entityId: "query_user_activity" }));
+
       const url = new URL(`${MONOLITH_API_URL.replace(/\/$/, "")}/api/v1/audit/logs`);
       if (userId) url.searchParams.set("userId", userId);
-      if (sourceApp) url.searchParams.set("sourceApp", sourceApp);
+      const app = forcedApp ?? sourceApp;
+      if (app) url.searchParams.set("sourceApp", app);
       if (from) url.searchParams.set("from", from);
       if (before) url.searchParams.set("before", before);
       url.searchParams.set("limit", (limit || 50).toString());
 
       const res = await fetch(url.toString(), {
-        headers: {
-          "Content-Type": "application/json",
-          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${bearer}` },
         cache: "no-store",
       });
 
@@ -79,10 +105,10 @@ export function registerAuditTools(server: McpServer) {
       title: "Query Domain Audit Events",
       description:
         "Query domain events from Monolith via GET /api/v1/audit/logs, filtered by app, domain, " +
-        "or event type. Returns { scope, count, results[], nextBefore }. A scoped key sees only " +
-        "its own app; sourceApp is honoured only for a cross-app key.",
+        "or event type. Returns { scope, count, results[], nextBefore }. Your identity's key sees " +
+        "only its own app; sourceApp is honoured only for an admin identity.",
       inputSchema: z.object({
-        sourceApp: z.string().optional().describe("Cross-app keys only: source application name (e.g. continuum-home)"),
+        sourceApp: z.string().optional().describe("Admin identity only: source application name (e.g. continuum-home)"),
         domain: z.string().optional().describe("Domain name (e.g. expenses, watchlist, investments, subscriptions)"),
         eventType: z.string().optional().describe("Allowlisted domain event type (e.g. EXPENSE_CREATED)"),
         userId: z.string().optional().describe("Filter by the acting user's local ID"),
@@ -91,11 +117,12 @@ export function registerAuditTools(server: McpServer) {
       }),
     },
     withToolErrors(async ({ sourceApp, domain, eventType, userId, from, limit }, extra) => {
-      const actor = mcpActor(extra);
-      if (actor) after(() => postback({ eventType: "MCP_QUERY", email: actor, entityId: "query_domain_events" }));
-      const apiKey = getApiKey();
+      const { bearer, forcedApp, actorEmail } = resolveAccess(extra);
+      if (actorEmail) after(() => postback({ eventType: "MCP_QUERY", email: actorEmail, entityId: "query_domain_events" }));
+
       const url = new URL(`${MONOLITH_API_URL.replace(/\/$/, "")}/api/v1/audit/logs`);
-      if (sourceApp) url.searchParams.set("sourceApp", sourceApp);
+      const app = forcedApp ?? sourceApp;
+      if (app) url.searchParams.set("sourceApp", app);
       if (domain) url.searchParams.set("domain", domain);
       if (eventType) url.searchParams.set("eventType", eventType);
       if (userId) url.searchParams.set("userId", userId);
@@ -103,10 +130,7 @@ export function registerAuditTools(server: McpServer) {
       url.searchParams.set("limit", (limit || 50).toString());
 
       const res = await fetch(url.toString(), {
-        headers: {
-          "Content-Type": "application/json",
-          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${bearer}` },
         cache: "no-store",
       });
 

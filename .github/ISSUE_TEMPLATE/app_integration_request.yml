@@ -10,6 +10,15 @@ body:
         entries, and destination BigQuery table(s). See `/docs` → **How to Add a New App** for context.
 
   - type: input
+    id: requester-email
+    attributes:
+      label: Requester Email Address
+      description: The authenticated Google account or developer email requesting this integration.
+      placeholder: user@example.com
+    validations:
+      required: true
+
+  - type: input
     id: source-app
     attributes:
       label: sourceApp identifier

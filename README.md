@@ -46,7 +46,7 @@ Hosting:    Vercel — monolith.adithyakrishnan.com
 - **Per-identity scoping.** `DASHBOARD_CLIENTS` maps an email to `{ scope, key }`. A scoped user sees only their app; the proxy pins `sourceApp` / `callerApp` on every request, and the key it presents is itself bound to that app upstream.
 - **Reports UI.** Typed inputs, sensible defaults, a client picker restricted to the apps a report applies to, a `General` / per-app tab split, and a one-click CSV download.
 - **Its own telemetry.** The dashboard postbacks `REPORT_RUN` and `MCP_QUERY` events back to Monolith API as `sourceApp: monolith-dashboard`, so its usage shows up in the same reports.
-- **Multi-user MCP.** `/api/mcp` registers per-user bearer keys and an owner fallback, with an in-memory per-instance rate limit.
+- **Multi-user MCP.** `/api/mcp` registers per-user bearer keys and an owner fallback. Data tools run as the caller's *own* Monolith credential — an admin key reaches every app, any other identity is resolved through `DASHBOARD_CLIENTS` and pinned to its app, and an unmapped identity is refused. Plus an in-memory per-instance rate limit.
 
 ## Project Structure
 
@@ -70,7 +70,7 @@ lib/
 
 ## Architecture
 
-Every signed-in caller ends up with a NextAuth session, and every data request goes through a same-origin proxy route — the Monolith API key stays on the server. The proxy resolves the session to a registered client, forwards the request with that client's bearer, and forces the app scope so a scoped user can only ever pull their own rows. AI agents take the other door: `/api/mcp`, bearer-authenticated, calling the same read endpoints. Report runs and MCP queries are postbacked to Monolith API so the dashboard's own usage lands in the warehouse alongside everything else.
+Every signed-in caller ends up with a NextAuth session, and every data request goes through a same-origin proxy route — the Monolith API key stays on the server. The proxy resolves the session to a registered client, forwards the request with that client's bearer, and forces the app scope so a scoped user can only ever pull their own rows. AI agents take the other door: `/api/mcp`, bearer-authenticated, calling the same read endpoints under the same per-identity scoping — the token maps to a registered credential and its calls run pinned to that app. Report runs and MCP queries are postbacked to Monolith API so the dashboard's own usage lands in the warehouse alongside everything else.
 
 ```mermaid
 flowchart LR
@@ -124,7 +124,7 @@ npm run start
 - **The key never reaches the browser.** All data flows through same-origin proxy routes that attach the Bearer server-side.
 - **Sign-in is gated.** Only emails in `DASHBOARD_CLIENTS` (or the `ALLOWED_EMAIL` solo-owner fallback) get a session; the proxy re-checks on every request.
 - **Scope is enforced twice.** The proxy pins `sourceApp` per session, *and* the key it presents is bound to that app in Monolith API — a bug in one layer can't leak another client's data.
-- **MCP is bearer-only** and rate limited per credential.
+- **MCP is bearer-only** and rate limited per credential. Its data tools go through the same per-identity resolution as the web proxies: a registered token maps to a `DASHBOARD_CLIENTS` credential and is pinned to that app; only an admin identity reads cross-app; an unmapped token is refused rather than handed a shared key.
 
 # Contributors
 

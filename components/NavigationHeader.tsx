@@ -38,11 +38,19 @@ export function NavigationHeader() {
   useEffect(() => setMenuOpen(false), [pathname]);
 
   const handleSignOut = () => {
+    try {
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
     signOut({ callbackUrl: "/" });
   };
 
   const handleSignIn = () => {
-    signIn("google", { callbackUrl: pathname && pathname !== "/" ? pathname : "/audit" });
+    signIn("google", {
+      callbackUrl: pathname && pathname !== "/" ? pathname : "/audit",
+      prompt: "select_account",
+    });
   };
 
   return (

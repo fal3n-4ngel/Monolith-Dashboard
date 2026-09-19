@@ -5,7 +5,8 @@ import { checkMcpRateLimit, resolveMcpClientKey } from "@/lib/mcp/rate-limit";
 
 // Monolith Telemetry Data Consumption MCP Server
 // Exposes BigQuery event telemetry, user activity queries, schema definitions, and ingestion health over MCP.
-// Strictly protected: Only registered MCP users with a valid Bearer token can access.
+// A valid registered Bearer token is required; data tools then run as that identity's own Monolith
+// credential (admin -> cross-app, everyone else -> pinned to their DASHBOARD_CLIENTS app).
 const handler = createMcpHandler((server) => {
   registerAuditTools(server);
 });

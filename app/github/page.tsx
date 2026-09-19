@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { GithubActivityWidget } from "@/components/GithubActivityWidget";
 import { GithubReposWidget } from "@/components/GithubReposWidget";
 import { ScheduledWorkflowsWidget } from "@/components/ScheduledWorkflowsWidget";
+import { AppIntegrationTicketsWidget } from "@/components/AppIntegrationTicketsWidget";
 
 export default function GithubPage() {
   return (
@@ -17,12 +18,13 @@ export default function GithubPage() {
           <div>
             <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">GitHub &amp; System Telemetry</h1>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-              Real-time GitHub activity streams, repository status, CI/CD action builds, and Cloud Run health monitoring.
+              Real-time GitHub activity streams, app integration tickets, repository status, CI/CD action builds, and Cloud Run health monitoring.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             <div className="lg:col-span-7 space-y-6">
+              <AppIntegrationTicketsWidget />
               <GithubActivityWidget />
               <ScheduledWorkflowsWidget />
             </div>

@@ -9,6 +9,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.AUTH_GOOGLE_SECRET || "",
     }),
   ],
+  pages: {
+    error: "/unauthorized",
+  },
   callbacks: {
     // Only identities in DASHBOARD_CLIENTS (or the ALLOWED_EMAIL fallback) may sign in.
     // The proxies re-check this and derive scope on every request.
