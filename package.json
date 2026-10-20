@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.3.1",
     "cron-parser": "^5.8.1",
     "js-yaml": "^5.2.3",
     "lucide-react": "^1.31.0",
